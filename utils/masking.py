@@ -16,7 +16,8 @@ class ProbMask():
         _mask_ex = _mask[None, None, :].expand(B, H, L, scores.shape[-1])
         indicator = _mask_ex[torch.arange(B)[:, None, None],
                              torch.arange(H)[None, :, None],
-                             index, :].to(device)
+                             index, :].to(device) # torch.Size([32, 8, 25, 72]) 
+        # 返回的是 被选中25个 Q 对应的位置, 的mask情况
         self._mask = indicator.view(scores.shape).to(device)
     
     @property

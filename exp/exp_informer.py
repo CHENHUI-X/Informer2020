@@ -61,7 +61,7 @@ class Exp_Informer(Exp_Basic):
         args = self.args
 
         data_dict = {
-            'ETTh1':Dataset_ETT_hour,
+            'ETTh1':Dataset_ETT_hour, # pytorch dataset
             'ETTh2':Dataset_ETT_hour,
             'ETTm1':Dataset_ETT_minute,
             'ETTm2':Dataset_ETT_minute,
@@ -71,12 +71,13 @@ class Exp_Informer(Exp_Basic):
             'custom':Dataset_Custom,
         }
         Data = data_dict[self.args.data]
-        timeenc = 0 if args.embed!='timeF' else 1
+        timeenc = 0 if args.embed!='timeF' else 1 # 1 for Time features encoding
 
         if flag == 'test':
             shuffle_flag = False; drop_last = True; batch_size = args.batch_size; freq=args.freq
         elif flag=='pred':
             shuffle_flag = False; drop_last = False; batch_size = 1; freq=args.detail_freq
+            #  detailed freq like 15min or 3h
             Data = Dataset_Pred
         else:
             shuffle_flag = True; drop_last = True; batch_size = args.batch_size; freq=args.freq
@@ -84,7 +85,7 @@ class Exp_Informer(Exp_Basic):
             root_path=args.root_path,
             data_path=args.data_path,
             flag=flag,
-            size=[args.seq_len, args.label_len, args.pred_len],
+            size=[args.seq_len, args.label_len, args.pred_len], # 96 48 24
             features=args.features,
             target=args.target,
             inverse=args.inverse,
@@ -257,10 +258,10 @@ class Exp_Informer(Exp_Basic):
         return
 
     def _process_one_batch(self, dataset_object, batch_x, batch_y, batch_x_mark, batch_y_mark):
-        batch_x = batch_x.float().to(self.device)
-        batch_y = batch_y.float()
+        batch_x = batch_x.float().to(self.device) # (b , 96 , 7)
+        batch_y = batch_y.float() # # (b , 48 , 7)
 
-        batch_x_mark = batch_x_mark.float().to(self.device)
+        batch_x_mark = batch_x_mark.float().to(self.device) # time embedding
         batch_y_mark = batch_y_mark.float().to(self.device)
 
         # decoder input
@@ -269,6 +270,7 @@ class Exp_Informer(Exp_Basic):
         elif self.args.padding==1:
             dec_inp = torch.ones([batch_y.shape[0], self.args.pred_len, batch_y.shape[-1]]).float()
         dec_inp = torch.cat([batch_y[:,:self.args.label_len,:], dec_inp], dim=1).float().to(self.device)
+        # 补齐真正的decoder的输入 , 48拿出来 再和 0 链接 ,得到一个新的变量, 这里batch_y是真实有效的数据(48)
         # encoder - decoder
         if self.args.use_amp:
             with torch.cuda.amp.autocast():
@@ -283,7 +285,8 @@ class Exp_Informer(Exp_Basic):
                 outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
         if self.args.inverse:
             outputs = dataset_object.inverse_transform(outputs)
-        f_dim = -1 if self.args.features=='MS' else 0
+        f_dim = -1 if self.args.features=='MS' else 0 # MS 多对 1
         batch_y = batch_y[:,-self.args.pred_len:,f_dim:].to(self.device)
+        # 只把真实预测的那部分返回 ( b , 24 , 7)
 
         return outputs, batch_y

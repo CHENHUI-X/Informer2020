@@ -89,10 +89,10 @@ def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
         ],
     }
 
-    offset = to_offset(freq_str)
+    offset = to_offset(freq_str) #  default freq_str = 'h'
 
     for offset_type, feature_classes in features_by_offsets.items():
-        if isinstance(offset, offset_type):
+        if isinstance(offset, offset_type): # 就是返回对应的类型
             return [cls() for cls in feature_classes]
 
     supported_freq_msg = f"""
@@ -146,6 +146,10 @@ def time_features(dates, timeenc=1, freq='h'):
             't':['month','day','weekday','hour','minute'],
         }
         return dates[freq_map[freq.lower()]].values
-    if timeenc==1:
+    if timeenc==1: # default branching 
         dates = pd.to_datetime(dates.date.values)
-        return np.vstack([feat(dates) for feat in time_features_from_frequency_str(freq)]).transpose(1,0)
+        return np.vstack(
+            [feat(dates) for feat in time_features_from_frequency_str(freq)]
+            # feat 对应 [HourOfDay, DayOfWeek, DayOfMonth, DayOfYear],
+            # 然后比如 HourOfDay 处理 dates 数据的hour , 做index.hour / 23.0 - 0.5 , 映射到了-0.5到0.5
+            ).transpose(1,0)

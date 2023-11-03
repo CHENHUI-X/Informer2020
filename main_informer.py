@@ -42,12 +42,12 @@ parser.add_argument('--do_predict', action='store_true', help='whether to predic
 parser.add_argument('--mix', action='store_false', help='use mix attention in generative decoder', default=True)
 parser.add_argument('--cols', type=str, nargs='+', help='certain cols from the data files as the input features')
 parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
-parser.add_argument('--itr', type=int, default=2, help='experiments times')
+parser.add_argument('--itr', type=int, default=1, help='experiments times')
 parser.add_argument('--train_epochs', type=int, default=6, help='train epochs')
 parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
 parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
-parser.add_argument('--des', type=str, default='test',help='exp description')
+parser.add_argument('--des', type=str, default='test',help='Experiment  description')
 parser.add_argument('--loss', type=str, default='mse',help='loss function')
 parser.add_argument('--lradj', type=str, default='type1',help='adjust learning rate')
 parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)
@@ -80,17 +80,18 @@ data_parser = {
 if args.data in data_parser.keys():
     data_info = data_parser[args.data]
     args.data_path = data_info['data']
-    args.target = data_info['T']
-    args.enc_in, args.dec_in, args.c_out = data_info[args.features]
+    args.target = data_info['T'] # target name
+    args.enc_in, args.dec_in, args.c_out = data_info[args.features] # 7 , 7 , 7 多对多输出预测
 
 args.s_layers = [int(s_l) for s_l in args.s_layers.replace(' ','').split(',')]
-args.detail_freq = args.freq
+args.detail_freq = args.freq #  detailed freq like 15min or 3h
 args.freq = args.freq[-1:]
 
 print('Args in experiment:')
 print(args)
 
 Exp = Exp_Informer
+exp = Exp(args) # set experiments
 
 for ii in range(args.itr):
     # setting record of experiments
@@ -99,15 +100,14 @@ for ii in range(args.itr):
                 args.d_model, args.n_heads, args.e_layers, args.d_layers, args.d_ff, args.attn, args.factor, 
                 args.embed, args.distil, args.mix, args.des, ii)
 
-    exp = Exp(args) # set experiments
     print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
     exp.train(setting)
     
     print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
     exp.test(setting)
-
+    
     if args.do_predict:
         print('>>>>>>>predicting : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-        exp.predict(setting, True)
+        exp.predict(setting, True) # 就是直接用最后96个预测新的24个数据, 只预测了一个步长
 
     torch.cuda.empty_cache()

@@ -13,10 +13,11 @@ class ConvLayer(nn.Module):
                                   padding_mode='circular')
         self.norm = nn.BatchNorm1d(c_in)
         self.activation = nn.ELU()
-        self.maxPool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
+        self.maxPool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1) # 长度减半
 
     def forward(self, x):
-        x = self.downConv(x.permute(0, 2, 1))
+        x = self.downConv(x.permute(0, 2, 1)) # [32, 512, 96])
+        # nn.batchNorm1d input (N,C) or (N,C,L)
         x = self.norm(x)
         x = self.activation(x)
         x = self.maxPool(x)

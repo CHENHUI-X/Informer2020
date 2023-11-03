@@ -29,6 +29,7 @@ class TokenEmbedding(nn.Module):
         padding = 1 if torch.__version__>='1.5.0' else 2
         self.tokenConv = nn.Conv1d(in_channels=c_in, out_channels=d_model, 
                                     kernel_size=3, padding=padding, padding_mode='circular')
+        # for padding_mode : https://www.jianshu.com/p/a6da4ad8e8e7
         for m in self.modules():
             if isinstance(m, nn.Conv1d):
                 nn.init.kaiming_normal_(m.weight,mode='fan_in',nonlinearity='leaky_relu')
@@ -88,7 +89,7 @@ class TimeFeatureEmbedding(nn.Module):
 
         freq_map = {'h':4, 't':5, 's':6, 'm':1, 'a':1, 'w':2, 'd':3, 'b':3}
         d_inp = freq_map[freq]
-        self.embed = nn.Linear(d_inp, d_model)
+        self.embed = nn.Linear(d_inp, d_model) # 简单的linear
     
     def forward(self, x):
         return self.embed(x)

@@ -24,7 +24,7 @@ class Informer(nn.Module):
         self.dec_embedding = DataEmbedding(dec_in, d_model, embed, freq, dropout)
         # Attention
         Attn = ProbAttention if attn=='prob' else FullAttention
-        # Encoder
+        # Encoder : default ProbAttention
         self.encoder = Encoder(
             [
                 EncoderLayer(
@@ -51,6 +51,7 @@ class Informer(nn.Module):
                                 d_model, n_heads, mix=mix),
                     AttentionLayer(FullAttention(False, factor, attention_dropout=dropout, output_attention=False), 
                                 d_model, n_heads, mix=False),
+                    # 对于decoder , cross attention 不需要mask
                     d_model,
                     d_ff,
                     dropout=dropout,
@@ -67,10 +68,10 @@ class Informer(nn.Module):
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, 
                 enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None):
         enc_out = self.enc_embedding(x_enc, x_mark_enc)
-        enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
-
-        dec_out = self.dec_embedding(x_dec, x_mark_dec)
-        dec_out = self.decoder(dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask)
+        enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask) # [32, 48, 512] 长度减半
+        dec_out = self.dec_embedding(x_dec, x_mark_dec) # [32, 72, 512]
+        # x_mark_dec 是time embedding
+        dec_out = self.decoder(dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask) # # mask的值都是None , 没有指定具体的值
         dec_out = self.projection(dec_out)
         
         # dec_out = self.end_conv1(dec_out)
